@@ -52,17 +52,18 @@ jobs:
       # ── 4. Build Wasm ────────────────────────────────────────────────────────
       - name: Build wasm
         run: |
-          ENV=${{ steps.vars.outputs.env }}
+          set -euo pipefail
+          ENV="${{ steps.vars.outputs.env }}"
           mkdir -p out
 
           opa build \
             --target wasm \
-            --entrypoint e_vite/result \   # 1. Update this to match your rego structure
-            ./policies \                   # 2. This works fine (it searches recursively)
+            --entrypoint e_vite/result \
+            ./policies \
             -o bundle.tar.gz
 
           tar -xzf bundle.tar.gz -C out
-          cp out/policy.wasm out/${ENV}.wasm
+          cp out/policy.wasm "out/${ENV}.wasm"
           echo "Built out/${ENV}.wasm"
 
       # ── 5. Install MinIO Client ──────────────────────────────────────────────
