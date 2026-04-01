@@ -75,11 +75,13 @@ jobs:
 
       # ── 6. Configure MinIO ───────────────────────────────────────────────────
       - name: Configure MinIO alias
+        env:
+          MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
         run: |
-          mc alias set myminio \
-            ${{ secrets.MINIO_ENDPOINT }} \
-            ${{ secrets.MINIO_ACCESS_KEY }} \
-            ${{ secrets.MINIO_SECRET_KEY }}
+          # Adding --api S3v4 forces the correct AWS signature method through the Cloudflare proxy
+          mc alias set myminio "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY" --api S3v4
 
       # ── 7. Upload ────────────────────────────────────────────────────────────
       - name: Upload to MinIO
