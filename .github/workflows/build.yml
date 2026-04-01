@@ -1,0 +1,88 @@
+name: Build OPA Wasm and Upload to MinIO
+
+on:
+  repository_dispatch:
+    types: [rego-changed] # fired by Repo 1
+  workflow_dispatch: # manual fallback
+    inputs:
+      branch:
+        description: "Branch to build (dev/test/prod)"
+        required: true
+        default: "dev"
+      env:
+        description: "Environment label (dev/test/prd)"
+        required: true
+        default: "dev"
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Resolve branch + env from either trigger ─────────────────────────
+      - name: Set variables
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            BRANCH="${{ github.event.client_payload.branch }}"
+            ENV="${{ github.event.client_payload.env }}"
+          else
+            BRANCH="${{ github.event.inputs.branch }}"
+            ENV="${{ github.event.inputs.env }}"
+          fi
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "env=$ENV"       >> $GITHUB_OUTPUT
+
+      # ── 2. Checkout the correct branch of Repo 1 (Policy Repo) ─────────────
+      - name: Checkout policy repo
+        uses: actions/checkout@v4
+        with:
+          repository: NivedGanga/e-vite-policy-integrationpoc--e-vite--test # ← change this
+          ref: ${{ steps.vars.outputs.branch }}
+          token: ${{ secrets.POLICY_REPO_PAT }} # PAT with read access to Repo 1
+          path: policies
+
+      # ── 3. Install OPA ───────────────────────────────────────────────────────
+      - name: Install OPA
+        run: |
+          curl -L -o opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64_static
+          chmod +x opa
+          sudo mv opa /usr/local/bin/opa
+
+      # ── 4. Build Wasm ────────────────────────────────────────────────────────
+      - name: Build wasm
+        run: |
+          ENV=${{ steps.vars.outputs.env }}
+          mkdir -p out
+
+          opa build \
+            --target wasm \
+            --entrypoint main/allow \
+            ./policies \
+            -o bundle.tar.gz
+
+          tar -xzf bundle.tar.gz -C out
+          cp out/policy.wasm out/${ENV}.wasm
+          echo "Built out/${ENV}.wasm"
+
+      # ── 5. Install MinIO Client ──────────────────────────────────────────────
+      - name: Install MinIO Client
+        run: |
+          curl -O https://dl.min.io/client/mc/release/linux-amd64/mc
+          chmod +x mc
+          sudo mv mc /usr/local/bin/mc
+
+      # ── 6. Configure MinIO ───────────────────────────────────────────────────
+      - name: Configure MinIO alias
+        run: |
+          mc alias set myminio \
+            ${{ secrets.MINIO_ENDPOINT }} \
+            ${{ secrets.MINIO_ACCESS_KEY }} \
+            ${{ secrets.MINIO_SECRET_KEY }}
+
+      # ── 7. Upload ────────────────────────────────────────────────────────────
+      - name: Upload to MinIO
+        run: |
+          ENV=${{ steps.vars.outputs.env }}
+          mc cp out/${ENV}.wasm myminio/${{ secrets.MINIO_BUCKET }}/${ENV}.wasm
+          echo "Uploaded ${ENV}.wasm to MinIO bucket"
