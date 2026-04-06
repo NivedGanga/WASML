@@ -38,7 +38,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: NivedGanga/e-vite-policy-integrationpoc--e-vite--test # ← change this
-          ref: ${{ steps.vars.outputs.env }}
+          ref: ${{ steps.vars.outputs.branch }}
           token: ${{ secrets.POLICY_REPO_PAT }} # PAT with read access to Repo 1
           path: policies
 
@@ -55,6 +55,10 @@ jobs:
           set -euo pipefail
           ENV="${{ steps.vars.outputs.env }}"
           mkdir -p out
+
+          # Count and print .rego files
+          REGO_COUNT=$(find ./policies -name "*.rego" | wc -l)
+          echo "Found $REGO_COUNT .rego files in ./policies"
 
           opa build \
             --target wasm \
