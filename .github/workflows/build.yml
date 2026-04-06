@@ -49,12 +49,11 @@ jobs:
           chmod +x opa
           sudo mv opa /usr/local/bin/opa
 
-      # ── 4. Build Wasm ────────────────────────────────────────────────────────
-      - name: Build wasm
+      # ── 4. Build Bundle ───────────────────────────────────────────────────────
+      - name: Build bundle
         run: |
           set -euo pipefail
           ENV="${{ steps.vars.outputs.env }}"
-          mkdir -p out
 
           # Count and print .rego files
           REGO_COUNT=$(find ./policies -name "*.rego" | wc -l)
@@ -64,12 +63,10 @@ jobs:
             --target wasm \
             --entrypoint e_vite/result \
             ./policies \
-            -o bundle.tar.gz
+            -o "${ENV}.tar.gz"
 
-          tar -xzf bundle.tar.gz -C out
-          cp out/policy.wasm "out/${ENV}.wasm"
-          echo "Built out/${ENV}.wasm"
-          du -h "out/${ENV}.wasm"
+          echo "Built ${ENV}.tar.gz"
+          du -h "${ENV}.tar.gz"
 
       # ── 5. Install MinIO Client ──────────────────────────────────────────────
       - name: Install MinIO Client
@@ -92,5 +89,5 @@ jobs:
       - name: Upload to MinIO
         run: |
           ENV=${{ steps.vars.outputs.env }}
-          mc cp out/${ENV}.wasm myminio/${{ secrets.MINIO_BUCKET }}/${ENV}.wasm
-          echo "Uploaded ${ENV}.wasm to MinIO bucket"
+          mc cp "${ENV}.tar.gz" "myminio/${{ secrets.MINIO_BUCKET }}/${ENV}.tar.gz"
+          echo "Uploaded ${ENV}.tar.gz to MinIO bucket"
