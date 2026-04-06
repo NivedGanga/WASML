@@ -38,7 +38,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: NivedGanga/e-vite-policy-integrationpoc--e-vite--test # ← change this
-          ref: ${{ steps.vars.outputs.branch }}
+          ref: ${{ steps.vars.outputs.env }}
           token: ${{ secrets.POLICY_REPO_PAT }} # PAT with read access to Repo 1
           path: policies
 
