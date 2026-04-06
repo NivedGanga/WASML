@@ -58,7 +58,7 @@ jobs:
 
           opa build \
             --target wasm \
-            --entrypoint e_vite/result \
+            --entrypoint evite/result \
             ./policies \
             -o bundle.tar.gz
 
