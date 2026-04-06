@@ -69,6 +69,7 @@ jobs:
           tar -xzf bundle.tar.gz -C out
           cp out/policy.wasm "out/${ENV}.wasm"
           echo "Built out/${ENV}.wasm"
+          du -h "out/${ENV}.wasm"
 
       # ── 5. Install MinIO Client ──────────────────────────────────────────────
       - name: Install MinIO Client
